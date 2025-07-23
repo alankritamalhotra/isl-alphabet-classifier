@@ -5,14 +5,23 @@ from tensorflow.keras import layers, models
 from sklearn.model_selection import train_test_split
 import cv2
 from tqdm import tqdm
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 DATA_DIR = "isl-dataset"  # rename this if you named your folder something else
 IMG_SIZE = 64
 
+datagen = ImageDataGenerator(
+    rotation_range=10,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.1,
+    horizontal_flip=True
+)
+
 # Load images and labels
 def load_data():
     X, y = [], []
-    labels = sorted(os.listdir(DATA_DIR))
+    labels = sorted([d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d))])
     label_map = {label: idx for idx, label in enumerate(labels)}
 
     for label in labels:
@@ -41,6 +50,7 @@ model = models.Sequential([
     layers.MaxPooling2D(2, 2),
     layers.Flatten(),
     layers.Dense(128, activation='relu'),
+    layers.Dropout(0.3),
     layers.Dense(len(label_map), activation='softmax')
 ])
 
@@ -49,7 +59,7 @@ model.compile(optimizer='adam',
               metrics=['accuracy'])
 
 # Train
-model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+model.fit(datagen.flow(X_train, y_train, batch_size=32), epochs=20, validation_data=(X_test, y_test))
 
 # Save model
 if not os.path.exists("models"):
